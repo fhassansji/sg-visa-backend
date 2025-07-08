@@ -1,13 +1,10 @@
+// api/generate.js
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method Not Allowed" });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
   const { nationality, purpose, salary } = req.body;
-
-  if (!nationality || !purpose || !salary) {
-    return res.status(400).json({ error: "Missing required fields" });
-  }
 
   const prompt = `
 You are a trusted Singapore immigration advisor.
@@ -28,42 +25,34 @@ Output JSON with keys:
   }
 }
 Only return valid JSON.
-`.trim();
+  `.trim();
 
   try {
-    const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
       },
       body: JSON.stringify({
-        model: "gpt-4",
+        model: 'gpt-4',
         messages: [
-          { role: "system", content: "You output only JSON – no explanation." },
-          { role: "user", content: prompt }
+          { role: 'system', content: 'You output only JSON – no explanation.' },
+          { role: 'user', content: prompt }
         ]
       })
     });
 
-    const data = await openaiRes.json();
+    const data = await response.json();
 
-    if (!data.choices || !data.choices[0]?.message?.content) {
-      console.error("Unexpected OpenAI response:", JSON.stringify(data));
-      return res.status(500).json({ error: "Invalid response from OpenAI" });
+    if (!data.choices || !data.choices[0]) {
+      return res.status(500).json({ error: 'Unexpected OpenAI response' });
     }
 
-    let json;
-    try {
-      json = JSON.parse(data.choices[0].message.content);
-    } catch (parseErr) {
-      console.error("JSON parsing failed:", parseErr);
-      console.error("Raw content:", data.choices[0].message.content);
-      return res.status(500).json({ error: "Failed to parse OpenAI JSON output" });
-    }
-
+    const json = JSON.parse(data.choices[0].message.content);
     res.status(200).json(json);
   } catch (err) {
-    console.error("OpenAI call failed:", err);
-    res.status(500).json({ error: "Checklist generation failed" });
+    console.error('❌ Error in /api/generate:', err);
+    res.status(500).json({ error: 'Failed to generate checklist' });
   }
 }
