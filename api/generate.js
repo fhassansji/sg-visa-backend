@@ -1,5 +1,13 @@
 export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method Not Allowed" });
+  }
+
   const { nationality, purpose, salary } = req.body;
+
+  if (!nationality || !purpose || !salary) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
 
   const prompt = `
 You are a trusted Singapore immigration advisor.
@@ -20,7 +28,7 @@ Output JSON with keys:
   }
 }
 Only return valid JSON.
-  `.trim();
+`.trim();
 
   try {
     const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -39,10 +47,24 @@ Only return valid JSON.
     });
 
     const data = await openaiRes.json();
-    const json = JSON.parse(data.choices[0].message.content);
+
+    if (!data.choices || !data.choices[0]?.message?.content) {
+      console.error("Unexpected OpenAI response:", JSON.stringify(data));
+      return res.status(500).json({ error: "Invalid response from OpenAI" });
+    }
+
+    let json;
+    try {
+      json = JSON.parse(data.choices[0].message.content);
+    } catch (parseErr) {
+      console.error("JSON parsing failed:", parseErr);
+      console.error("Raw content:", data.choices[0].message.content);
+      return res.status(500).json({ error: "Failed to parse OpenAI JSON output" });
+    }
+
     res.status(200).json(json);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Checklist generation failed." });
+    console.error("OpenAI call failed:", err);
+    res.status(500).json({ error: "Checklist generation failed" });
   }
 }
