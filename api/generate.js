@@ -33,15 +33,15 @@ Only return valid JSON.
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
       },
       body: JSON.stringify({
         model: 'gpt-4',
         messages: [
           { role: 'system', content: 'You output only JSON – no explanation.' },
           { role: 'user', content: prompt }
-        ],
-      }),
+        ]
+      })
     });
 
     const data = await openaiRes.json();
