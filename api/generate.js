@@ -1,4 +1,5 @@
 // api/generate.js
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
@@ -28,31 +29,28 @@ Only return valid JSON.
   `.trim();
 
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
         model: 'gpt-4',
         messages: [
           { role: 'system', content: 'You output only JSON – no explanation.' },
           { role: 'user', content: prompt }
-        ]
-      })
+        ],
+      }),
     });
 
-    const data = await response.json();
+    const data = await openaiRes.json();
+    const content = data.choices[0].message.content;
+    const json = JSON.parse(content);
 
-    if (!data.choices || !data.choices[0]) {
-      return res.status(500).json({ error: 'Unexpected OpenAI response' });
-    }
-
-    const json = JSON.parse(data.choices[0].message.content);
     res.status(200).json(json);
   } catch (err) {
-    console.error('❌ Error in /api/generate:', err);
+    console.error(err);
     res.status(500).json({ error: 'Failed to generate checklist' });
   }
 }
